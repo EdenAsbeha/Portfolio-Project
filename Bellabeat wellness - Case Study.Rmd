@@ -1,3 +1,8 @@
+The browser page shows the code output and gigplots. 
+
+file:///Users/edugenet/Downloads/Bellabeat-Case-Study-Report.html
+
+
 ---
 title: "Bellabeat Case Study"
 author: "Eden Asbeha"
