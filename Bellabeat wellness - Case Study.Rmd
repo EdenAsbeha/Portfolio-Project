@@ -1,4 +1,4 @@
-The browser page shows the code output and gigplots. 
+Here is a browser link to the RMD file knitted in HTML. It was too large to view here. 
 
 file:///Users/edugenet/Downloads/Bellabeat-Case-Study-Report.html
 
