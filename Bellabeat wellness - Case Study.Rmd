@@ -1,0 +1,333 @@
+---
+title: "Bellabeat Case Study"
+author: "Eden Asbeha"
+date: '2022-04-16'
+output: html_document
+
+Table of contents: 
+
+* About the company
+* The Business Task
+* About the Dataset
+* Load libraries 
+* Data Cleaning
+* Data Explorations
+* Visualization
+* Summary
+* Recommendations
+* What's Next
+* Sources
+
+### About the company
+
+[Bellabeat](https://bellabeat.com) is a small high-tech manufacturer of healthy lifestyle and wellness products designed for women. The company's mission is to empower women with information about their own wellness by collecting data on their activities, sleep, products health, and stress through the Bellabeat app. As a result, it has become successful. The co-founder and chief creative officer of Bellabeat, Urska Srsen, believes there is still room for improvement. Therefore, she has requested to analyze consumers’ habits when using a non-Bellabeat smart device to unlock new opportunities that could be implemented towards one of the Bellabeat smart products. 
+
+### The Business Task
+
+The business task is to analyze the habits of consumers when using non-Bellabeat smart devices to unlock new opportunities that could be implemented towards one of the Bellabeat smart products to further consumers satisfaction. Therefore, the questions I need to be considering is
+  
+* What are some trends in smart device usage and how could these trends apply to Bellabeat customers?
+  
+* How could these trends help influence Bellabeat marketing strategy?
+
+### About the Dataset
+
+The data source is the [Fitbit Fitness tracker data](https://www.kaggle.com/arashnic/fitbit). This kaggle data contains personal fitness information from consented 33 Fitbit users regarding their daily activity like sleep monitoring, weight log, heart rate, steps, and more. I will be using this information to explore users’ habits. 
+
+I'm using RStudio to clean, process, and visualize the data set. So then I will upload the selected data that I believe will help me in identify the key habits of the consumers and make effective decisions. 
+
+### Load libraries 
+
+```{r}
+library(lubridate)
+library(ggplot2)
+library(tidyverse)
+library(janitor)
+library(purrr)
+library(skimr)
+library(dplyr)
+library(hms)
+```
+
+### Import data
+
+```{r}
+daily_activity <- read.csv("/Users/edugenet/Desktop/Case study/Fitabase Data 4.12.16-5.12.16/dailyActivity_merged_cl.csv")
+
+hourly_calories <- read.csv("/Users/edugenet/Desktop/Case study/Fitabase Data 4.12.16-5.12.16/hourlyCalories_merged.csv")
+
+hourly_intensities <- read.csv("/Users/edugenet/Desktop/Case study/Fitabase Data 4.12.16-5.12.16/hourlyIntensities_merged.csv")
+
+hourly_steps <- read.csv("/Users/edugenet/Desktop/Case study/Fitabase Data 4.12.16-5.12.16/hourlySteps_merged.csv")
+
+daily_sleep <- read.csv("/Users/edugenet/Desktop/Case study/Fitabase Data 4.12.16-5.12.16/sleepDay_merged.csv")
+
+weight_log <- read.csv("/Users/edugenet/Desktop/Case study/Fitabase Data 4.12.16-5.12.16/weightLoginfo_merged.csv")
+
+heart_rate <- read.csv("/Users/edugenet/Desktop/Case study/Fitabase Data 4.12.16-5.12.16/heartrate_merged.csv")
+```
+ 
+### Data Cleaning
+
+```{r}
+#Check for correct data types, readable column names, select/reorder columns, add columns, and drop NA values.
+
+ activity <- daily_activity %>% 
+   clean_names() %>%            
+   mutate(date = ymd(daily_activity$ActivityDate)) %>% 
+   select(1,16,3,4,11,12,13,14,15)  
+
+ calories <- hourly_calories %>% 
+   drop_na() %>%
+   clean_names() %>%
+   mutate(date = ymd(hourly_calories$ActivityDate))%>%
+   select(1,5,3,4)
+
+  intensities <- hourly_intensities %>%
+    clean_names() %>%
+    mutate(date = ymd(hourly_intensities$ActivityDate)) %>%
+    select(1,6,3,4,5)
+    
+  intensities$time <- format(intensities$time, format = "%H:%M:%S")
+  
+ steps <- hourly_steps %>% 
+    clean_names() %>%
+    mutate(date = ymd(hourly_steps$ActivityDate)) %>%
+    select(1,5,3,4,)
+    
+  steps$time <- format(steps$time, format = "%H:%M:%S")
+  
+
+  sleep <- daily_sleep %>%
+    clean_names %>% 
+    mutate(date = ymd(daily_sleep$SleepDay)) %>%
+    select(1,7,3,4,5,6)
+ 
+ daily_sleep$time <- format(daily_sleep$time, format = "%H:%M:%S")
+
+  weight <- weight_log %>%
+    clean_names() %>%
+    mutate(date = ymd(weight_log$Date)) %>%
+    select(1,2,3,4,6)
+ 
+  heartrate <-  heart_rate %>%
+    clean_names() %>%
+    mutate(date = ymd(heart_rate$date))
+    
+    heartrate$time <- format(heartrate$time, format = "%H:%M:%S")  
+```   
+
+## Data Exploration 
+
+```{r}
+# Check the unique number of entrys by the users for each category.
+
+activity %>%
+  group_by(activity$id) %>%
+  summarise(number_of_entry = n())
+
+sleep %>%
+  group_by(id) %>%
+  summarise(number_of_entry = n())
+
+weight %>%
+  group_by(id) %>%
+  summarise(number_of_entry = n())
+
+steps %>%
+  group_by(id) %>%
+  summarise(number_of_entry = n()/24) 
+
+#calories %>%
+  #group_by(id) %>%
+  #summarise(number_of_entry = n()/24)
+
+intensities %>%
+  group_by(id) %>%
+  summarise(number_of_entry = n()/24) 
+```
+
+```{r}
+#Check the number of participants in each cataegory
+
+n_distinct(activity$id)
+n_distinct(intensities$id)
+n_distinct(calories$id)
+n_distinct(sleep$id)
+n_distinct(steps$id)
+n_distinct(weight$id)
+n_distinct(heartrate$id)
+```
+
+The participants for each category are not consistent all across. There are 33 in activities, 3 in intensities, 33 in calories, 24 in sleep, 33 in steps, 8 in weight, and 7 in heart rate. 
+
+Now, let’s check the relationship between activity and sleep. 
+
+```{r}
+#Check relationship between activity and sleep.
+
+sleep_steps <- merge(sleep, steps, by.x = "id", by.y = "id")
+
+sleep_steps %>%
+  select(total_minutes_asleep) %>%
+  summary()
+  
+activity %>%
+  select(lightly_active_minutes, 
+         fairly_active_minutes,
+         very_active_minutes, 
+         sedentary_minutes) %>%
+  summary()
+  
+```
+
+The average amount of sleep for the participants is almost 7 hours, and sedentary minutes are 16 hours. According to [health.gov](https://www.heart.org/en/healthy-living/fitness/fitness-basics/target-heart-rates), most adults need to get at least 7 hours of quality sleep on a regular schedule daily for better health and optimal productivity. In the app, a reminder can be set when a user goes sedentary for an extended period of time.
+
+## Visualization
+
+```{r}
+#summarise and visualize the relationship between steps and calories
+
+activity%>%
+  select(total_steps, calories) %>%
+  summary()
+
+ggplot(data = activity, 
+       mapping = aes(x = total_steps,
+                     y = calories)) +
+  geom_point(size = 2, alpha = 0.5) + 
+  geom_smooth(color = "red") +
+  labs(title = "Fitbit Fitness Data: Steps vs Calories", 
+       subtitle = "Sample for total steps and calories burned", 
+       caption = "Data collected by Fitbit Fitness Tracker", x = "Steps", y = "Calories") + 
+  annotate("text", x = 36019, y = 0, 
+           label= " Max steps: 36019 ", size = 2) +
+  annotate("text", x = 0, y = 4900, 
+           label= " Max cal: 4900 ", size = 2) +
+  theme_bw()
+
+```
+
+The plot shows there is a positive correlation between steps and calories.
+The more steps we take, the more calories we burn. 
+
+Now, let’s check the heart rate of all 7 participants.  
+
+```{r}
+# Create a new table showing the min, avg, and max heartrate per id. 
+
+heartrate_tab <- heartrate %>%
+  group_by(id) %>%
+  summarise( min_rate =  min(value), 
+             Avg_rate = mean(value),
+             max_rate = max(value))  %>%
+  arrange(Avg_rate) %>%
+  view()
+```
+
+I understand the record from the seven participants is small to make an accurate analysis for the heartrate data set. But even with the given information, according to the heart.org heartrate chart, the maximum heart rate is above the healthy range which is 60 - 100. But that also depends on the age of the participants, which unfortunately wasn't given in this case. That being said, the higher rates still do need to come under 100 to be considered "normal", the lower the range, the healthier. The app should have an alert notification for the user when the rate goes over the normal range, and should also have a list of suggestions and recommendations for ways to bring it down. 
+
+Now, let’s plot the relationship between active minutes and sedentary minutes to check the ratio
+
+```{r}
+#Add all the active minutes including very, fairly and lightly active minutes and compare to sedentary minutes
+
+activity %>%
+  drop_na() %>%
+  mutate(total_active_min = rowSums(activity[, c(3,4,5)], na.rm=TRUE)) %>%
+  ggplot(activity, mapping= aes(total_active_min, sedentary_minutes)) +
+  geom_point(size = 2, color  = "purple", alpha = 0.5 ) +
+  geom_smooth(method= lm) +
+  labs(x = "Active",
+       y = "Sedentary",
+       title = "Fitbit Fitness Data: Sedentary minutes vs Active minutes ",
+       caption = "Kaggle: Data collected by Fitbit Fitness Tracker") +
+  theme_bw()                   
+``` 
+
+Understandably, we clearly see that there is a negative correlation between the
+total active minutes and sedentary minutes. The sedentary minutes are much higher in comparison to all the active minutes combined. So that needs to be reduced significantly. 
+
+Now let’s analyze the BMI range.
+
+```{r}
+    weight2 <- merge(weight, intensities, by.x = "id", by.y = "id")
+    head(weight2)
+```
+
+Recode the BMI numeric values with the standard weight status categories, which can be found at [cdc.gov](https://www.cdc.gov/healthyweight/assessing/bmi/adult_bmi/index.html)  
+ 
+```{r}
+#Catagorize BMI numeric value by the standard range
+ 
+    weight2 <- weight %>%
+    group_by(id) %>%
+    mutate(bmi = if_else(bmi >= 18.5 & bmi <= 24.9, "Healthy weight", 
+           if_else(bmi < 18.5, "Under weight", 
+           if_else(bmi >= 25 & bmi <= 29.9, "Over weight",
+           if_else(bmi >= 30, "Obese", "Wrong Value"))))) 
+    
+    weight2 %>%  
+      drop_na(bmi) %>%
+      ggplot(aes(x = bmi, fill = bmi)) + 
+      geom_bar(position = "dodge", alpha = 0.5) + 
+      labs( x = "BMI",
+            Y = NULL, 
+            title = "Fitbit Fitness Data: BMI status",
+            caption = "Kaggle: Data collected by Fitbit Fitness Tracker") +
+      theme_bw() +
+      theme(panel.grid.major = element_blank())
+    
+    weight2 %>%
+      group_by(bmi) %>%
+      group_by(bmi) %>%
+      summarise(n_distinct(id))
+```                                                         
+
+The bar plot and the summary shows that out of the 8 participants, 3 are a healthy weight, 4 are overweight and 1 is obese. Having this type of report in the app can be significant in improving one’s weight/BMI goal. A default notification for a weekly report with a custom option can be added to the app.
+
+let’s evaluate the Pivot table showing the time of the day when a user is most active. 
+
+![Most active hours of the day](/Users/edugenet/Desktop/Screen Shot 2022-04-18 at 3.52.14 PM.png)
+
+The summary shows that the most active hours of the day are between 5:00 PM - and 7:00 PM. 10:00 AM - 7:00 PM is generally active. Therefore, a reminder notification can be set up around this time frame.  
+
+## Summary 
+
+The target market for Bellabeat is women.  And a marketing strategy that focuses on both practicality and fashion is preferred by most, which is why the company has been successful. I believe promoting fashionable products that are equipped with current technology are desirable and smart business ventures.
+
+The trend in smart devices is primarily voice assistance and wearable devices, which is a great opportunity for Bellabeat since they carry a watch called TIme. [Time] (https://bellabeat.com/time/)  is a fashionable hybrid tracker watch that helps improve body wellness by tracking activity and sleep. And it comes in two classic colors, silver and rose gold. 
+
+The app does a great job of displaying wellness reports. But it would also be a significant improvement to be further developed to support voice assistance, which in turn maximizes customer satisfaction and will drive up sales and continue the company’s success.    
+
+I strongly believe that customer satisfaction is key to a company’s growth. 
+
+## Recommendations 
+
+In addition to adding voice assistance, I also recommend adding and setting the following notifications and reminders when.
+
+* A user goes inactive for an extended period of time
+* Heart rate goes over the normal range along with suggestions to bring the rate down to a normal range 
+* A user hits their goal and also when they are close to keeping them motivated
+* It's time to sleep
+* It's around the time when they are most active to keep them consistent
+
+some customers may also enjoy reading motivational quotes or reading testimonials from other users as well. So that can also be an optional notification. 
+
+### What's next? 
+
+* Collect more data on weight, heart rate and intensity categories 
+* In the Bellabeat app, create an interacive servey that can be taken when a user is consistently active, and use that data to stay current and keep improving app performance 
+
+THANK YOU for your time! 
+
+### Sources:
+
+American Heart Association Editorial Staff And Reviewed By Science And Medicine Advisers. (2021). Target Heart Rates Chart. Retrieved from https://www.heart.org/en/healthy-living/fitness/fitness-basics/target-heart-rates
+
+Raymond, M. (n.d.).Usage and Buying Trends in Smart Home Devices: GoodFirms Research. Www.goodfirms.co. https://www.goodfirms.co/resources/buying-smart-home-devices-statistics
+
+Marr, B. (2021, September 27).The 5 Biggest Technology Trends In 2022. Forbes. https://www.forbes.com/sites/bernardmarr/2021/09/27/the-5-biggest-technology-trends-in-2022/?sh=4f857cc24147
+
+https://bellabeat.com
+
