@@ -15,7 +15,7 @@ library(dplyr)
 library(hms)
 ```
 
-### Import data
+### Import Data
 
 ```{r}
 daily_activity <- read.csv("/Users/edugenet/Desktop/Case study/Fitabase Data 4.12.16-5.12.16/dailyActivity_merged_cl.csv")
